@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opportunity Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
+
+    // SVG Icons as components
+    const Icons = {
+      briefcase: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>,
+      plus: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+      filter: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+      download: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
+      upload: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>,
+      users: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+      user: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+      activity: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+      dashboard: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
+      x: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+      edit: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>,
+      trash: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+      building: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>,
+      phone: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+      mail: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>,
+      file: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
+      clock: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      globe: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>,
+      linkedin: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>,
+      mapPin: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>,
+      chevronDown: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+      chevronRight: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
+      externalLink: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>,
+      dollarSign: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+    };
+
+    const Icon = ({ name, size = 18, className = "" }) => {
+      const icon = Icons[name];
+      if (!icon) return null;
+      return <span className={`inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>{React.cloneElement(icon, { width: size, height: size })}</span>;
+    };
+
+    // Consulting Sales Stages
+    const SALES_STAGES = [
+      { id: 'lead', name: 'Lead', color: '#94a3b8', probability: 10 },
+      { id: 'discovery', name: 'Discovery', color: '#60a5fa', probability: 20 },
+      { id: 'qualification', name: 'Qualification', color: '#a78bfa', probability: 30 },
+      { id: 'proposal_dev', name: 'Proposal Development', color: '#f472b6', probability: 50 },
+      { id: 'proposal_submitted', name: 'Proposal Submitted', color: '#fb923c', probability: 60 },
+      { id: 'negotiation', name: 'Negotiation', color: '#facc15', probability: 75 },
+      { id: 'contract', name: 'Contract/SOW', color: '#4ade80', probability: 90 },
+      { id: 'won', name: 'Won', color: '#22c55e', probability: 100 },
+      { id: 'lost', name: 'Lost', color: '#ef4444', probability: 0 },
+    ];
+
+    const SOURCES = ['Referral', 'Website/Inbound', 'Networking', 'Conference', 'LinkedIn', 'Cold Outreach', 'Existing Client', 'Partner/Alliance', 'Other'];
+
+    const INDUSTRIES = ['Technology', 'Finance', 'Healthcare', 'Manufacturing', 'Retail', 'Professional Services', 'Education', 'Government', 'Non-Profit', 'Energy', 'Real Estate', 'Media & Entertainment', 'Transportation', 'Hospitality', 'Other'];
+
+    const ACTIVITY_TYPES = [
+      { id: 'call', name: 'Call', icon: 'phone' },
+      { id: 'email', name: 'Email', icon: 'mail' },
+      { id: 'meeting', name: 'Meeting', icon: 'users' },
+      { id: 'proposal', name: 'Proposal', icon: 'file' },
+      { id: 'note', name: 'Note', icon: 'edit' },
+      { id: 'follow_up', name: 'Follow-up', icon: 'clock' },
+    ];
+
+    // Data migration function
+    const migrateData = (data) => {
+      // If companies array doesn't exist, we need to migrate
+      if (!data.companies) {
+        const companyMap = new Map();
+
+        // Extract unique company names from contacts and opportunities
+        const allCompanyNames = new Set();
+        data.contacts?.forEach(c => c.company && allCompanyNames.add(c.company));
+        data.opportunities?.forEach(o => o.company && allCompanyNames.add(o.company));
+
+        // Create company records
+        const companies = [];
+        allCompanyNames.forEach(name => {
+          const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+          companyMap.set(name, id);
+          companies.push({
+            id,
+            name,
+            website: '',
+            linkedIn: '',
+            industry: '',
+            address: '',
+            phone: '',
+            employeeCount: '',
+            annualRevenue: '',
+            description: '',
+            createdDate: new Date().toISOString().split('T')[0]
+          });
+        });
+
+        // Update contacts to use companyId
+        const migratedContacts = (data.contacts || []).map(c => ({
+          ...c,
+          companyId: companyMap.get(c.company) || '',
+          company: undefined // Remove old field
+        }));
+
+        // Update opportunities to use companyId
+        const migratedOpportunities = (data.opportunities || []).map(o => ({
+          ...o,
+          companyId: companyMap.get(o.company) || '',
+          company: undefined // Remove old field
+        }));
+
+        return {
+          ...data,
+          companies,
+          contacts: migratedContacts,
+          opportunities: migratedOpportunities,
+          activities: data.activities || []
+        };
+      }
+
+      return data;
+    };
+
+    // API configuration
+    const API_BASE = '/api';
+    
+    // Default empty data structure
+    const getEmptyData = () => ({
+      companies: [],
+      opportunities: [],
+      contacts: [],
+      activities: []
+    });
+
+    // API helper functions
+    const api = {
+      async loadData() {
+        try {
+          const response = await fetch(`${API_BASE}/data`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          return migrateData(data);
+        } catch (error) {
+          console.error('Failed to load data from API:', error);
+          // Fall back to localStorage for offline support
+          const saved = localStorage.getItem('opportunityTrackerData');
+          if (saved) {
+            try {
+              return migrateData(JSON.parse(saved));
+            } catch (e) { }
+          }
+          return getEmptyData();
+        }
+      },
+      
+      async saveData(data) {
+        try {
+          const response = await fetch(`${API_BASE}/data`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          // Also save to localStorage as backup
+          localStorage.setItem('opportunityTrackerData', JSON.stringify(data));
+          return true;
+        } catch (error) {
+          console.error('Failed to save data to API:', error);
+          // Save to localStorage as fallback
+          localStorage.setItem('opportunityTrackerData', JSON.stringify(data));
+          return false;
+        }
+      }
+    };
+
+    const getInitialData = () => {
+      // Return empty data initially - actual data will be loaded via useEffect
+      const saved = localStorage.getItem('opportunityTrackerData');
+      if (saved) {
+        try {
+          return migrateData(JSON.parse(saved));
+        } catch (e) { }
+      }
+      return getEmptyData();
+    };
+
+    function App() {
+      const [data, setData] = useState(getInitialData);
+      const [activeView, setActiveView] = useState('pipeline');
+      const [selectedOpp, setSelectedOpp] = useState(null);
+      const [selectedCompany, setSelectedCompany] = useState(null);
+      const [showOppModal, setShowOppModal] = useState(false);
+      const [showContactModal, setShowContactModal] = useState(false);
+      const [showActivityModal, setShowActivityModal] = useState(false);
+      const [showCompanyModal, setShowCompanyModal] = useState(false);
+      const [editingItem, setEditingItem] = useState(null);
+      const [showFilters, setShowFilters] = useState(false);
+      const [filters, setFilters] = useState({ stages: [], sources: [], dateFrom: '', dateTo: '', valueMin: '', valueMax: '', search: '' });
+      const [expandedCompanies, setExpandedCompanies] = useState({});
+      const [isLoading, setIsLoading] = useState(true);
+      const [saveStatus, setSaveStatus] = useState('saved'); // 'saved', 'saving', 'error'
+
+      // Load data from API on mount
+      useEffect(() => {
+        const loadFromApi = async () => {
+          setIsLoading(true);
+          const apiData = await api.loadData();
+          setData(apiData);
+          setIsLoading(false);
+        };
+        loadFromApi();
+      }, []);
+
+      // Save to API when data changes (debounced)
+      useEffect(() => {
+        if (isLoading) return; // Don't save during initial load
+        
+        const saveTimeout = setTimeout(async () => {
+          setSaveStatus('saving');
+          const success = await api.saveData(data);
+          setSaveStatus(success ? 'saved' : 'error');
+        }, 1000); // Debounce saves by 1 second
+        
+        return () => clearTimeout(saveTimeout);
+      }, [data, isLoading]);
+
+      const filteredOpps = useMemo(() => {
+        return data.opportunities.filter(o => {
+          if (filters.stages.length && !filters.stages.includes(o.stage)) return false;
+          if (filters.sources.length && !filters.sources.includes(o.source)) return false;
+          if (filters.dateFrom && o.expectedCloseDate < filters.dateFrom) return false;
+          if (filters.dateTo && o.expectedCloseDate > filters.dateTo) return false;
+          if (filters.valueMin && o.value < parseFloat(filters.valueMin)) return false;
+          if (filters.valueMax && o.value > parseFloat(filters.valueMax)) return false;
+          const company = data.companies.find(c => c.id === o.companyId);
+          const companyName = company?.name || '';
+          if (filters.search && !o.name.toLowerCase().includes(filters.search.toLowerCase()) && !companyName.toLowerCase().includes(filters.search.toLowerCase())) return false;
+          return true;
+        });
+      }, [data.opportunities, data.companies, filters]);
+
+      const metrics = useMemo(() => {
+        const active = filteredOpps.filter(o => !['won', 'lost'].includes(o.stage));
+        const won = filteredOpps.filter(o => o.stage === 'won');
+        const lost = filteredOpps.filter(o => o.stage === 'lost');
+        return {
+          pipeline: active.reduce((s, o) => s + o.value, 0),
+          weighted: active.reduce((s, o) => s + o.value * (SALES_STAGES.find(st => st.id === o.stage)?.probability || 0) / 100, 0),
+          wonValue: won.reduce((s, o) => s + o.value, 0),
+          winRate: won.length + lost.length > 0 ? Math.round(won.length / (won.length + lost.length) * 100) : 0,
+          count: active.length
+        };
+      }, [filteredOpps]);
+
+      const fmt = (v) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(v);
+
+      const getCompanyName = (companyId) => data.companies.find(c => c.id === companyId)?.name || 'Unknown';
+
+      // Company CRUD
+      const saveCompany = (company) => {
+        setData(p => company.id && p.companies.find(c => c.id === company.id)
+          ? { ...p, companies: p.companies.map(c => c.id === company.id ? company : c) }
+          : { ...p, companies: [...p.companies, { ...company, id: Date.now().toString(), createdDate: new Date().toISOString().split('T')[0] }] });
+        setShowCompanyModal(false);
+        setEditingItem(null);
+      };
+
+      const deleteCompany = (id) => {
+        const contactCount = data.contacts.filter(c => c.companyId === id).length;
+        const oppCount = data.opportunities.filter(o => o.companyId === id).length;
+        if (contactCount > 0 || oppCount > 0) {
+          alert(`Cannot delete company. It has ${contactCount} contact(s) and ${oppCount} opportunity(ies) associated with it.`);
+          return;
+        }
+        if (confirm('Delete this company?')) {
+          setData(p => ({ ...p, companies: p.companies.filter(c => c.id !== id) }));
+          setSelectedCompany(null);
+        }
+      };
+
+      const saveOpp = (opp) => {
+        setData(p => opp.id && p.opportunities.find(o => o.id === opp.id)
+          ? { ...p, opportunities: p.opportunities.map(o => o.id === opp.id ? opp : o) }
+          : { ...p, opportunities: [...p.opportunities, { ...opp, id: Date.now().toString(), createdDate: new Date().toISOString().split('T')[0] }] });
+        setShowOppModal(false); setEditingItem(null);
+      };
+
+      const deleteOpp = (id) => { if (confirm('Delete this opportunity?')) { setData(p => ({ ...p, opportunities: p.opportunities.filter(o => o.id !== id), activities: p.activities.filter(a => a.opportunityId !== id) })); setSelectedOpp(null); } };
+
+      const saveContact = (c) => {
+        setData(p => c.id && p.contacts.find(x => x.id === c.id)
+          ? { ...p, contacts: p.contacts.map(x => x.id === c.id ? c : x) }
+          : { ...p, contacts: [...p.contacts, { ...c, id: Date.now().toString() }] });
+        setShowContactModal(false); setEditingItem(null);
+      };
+
+      const deleteContact = (id) => { if (confirm('Delete this contact?')) setData(p => ({ ...p, contacts: p.contacts.filter(c => c.id !== id) })); };
+
+      const saveActivity = (a) => {
+        setData(p => a.id && p.activities.find(x => x.id === a.id)
+          ? { ...p, activities: p.activities.map(x => x.id === a.id ? a : x) }
+          : { ...p, activities: [...p.activities, { ...a, id: Date.now().toString(), createdAt: new Date().toISOString() }] });
+        setShowActivityModal(false); setEditingItem(null);
+      };
+
+      const updateStage = (id, stage) => setData(p => ({ ...p, opportunities: p.opportunities.map(o => o.id === id ? { ...o, stage } : o) }));
+
+      const exportData = () => { const b = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `crm-backup-${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(u); };
+
+      const importData = (e) => {
+        const f = e.target.files?.[0];
+        if (f) { const r = new FileReader(); r.onload = (ev) => { try { const d = JSON.parse(ev.target.result); const migrated = migrateData(d); if (migrated.opportunities && migrated.contacts && migrated.companies) { setData(migrated); alert('Imported!'); } } catch { alert('Error'); } }; r.readAsText(f); }
+      };
+
+      const toggleCompanyExpand = (companyId) => {
+        setExpandedCompanies(prev => ({ ...prev, [companyId]: !prev[companyId] }));
+      };
+
+      const NavBtn = ({ view, icon, label }) => (
+        <button onClick={() => setActiveView(view)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${activeView === view ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <Icon name={icon} size={18} /><span className="hidden sm:inline">{label}</span>
+        </button>
+      );
+
+      const Pipeline = () => (
+        <div className="overflow-x-auto pb-4">
+          <div className="flex gap-4 min-w-max">
+            {SALES_STAGES.filter(s => s.id !== 'lost').map(stage => {
+              const opps = filteredOpps.filter(o => o.stage === stage.id);
+              return (
+                <div key={stage.id} className="w-72 flex-shrink-0 bg-gray-50 rounded-lg" onDragOver={e => e.preventDefault()} onDrop={e => { const id = e.dataTransfer.getData('oppId'); if (id) updateStage(id, stage.id); }}>
+                  <div className="p-3 border-b bg-white rounded-t-lg">
+                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} /><span className="font-medium">{stage.name}</span><span className="ml-auto text-sm text-gray-500">{opps.length}</span></div>
+                    <div className="text-sm text-gray-500 mt-1">{fmt(opps.reduce((s, o) => s + o.value, 0))}</div>
+                  </div>
+                  <div className="p-2 space-y-2 min-h-[200px]">
+                    {opps.map(o => (
+                      <div key={o.id} draggable onDragStart={e => e.dataTransfer.setData('oppId', o.id)} onClick={() => setSelectedOpp(o)} className="bg-white p-3 rounded-lg shadow-sm border cursor-pointer hover:shadow-md">
+                        <div className="font-medium text-sm">{o.name}</div>
+                        <div className="text-xs text-gray-500 mt-1 flex items-center gap-1"><Icon name="building" size={12} />{getCompanyName(o.companyId)}</div>
+                        <div className="flex justify-between mt-2"><span className="text-sm font-semibold text-green-600">{fmt(o.value)}</span><span className="text-xs text-gray-400">{o.expectedCloseDate}</span></div>
+                        <div className="mt-1"><span className="text-xs px-2 py-0.5 bg-gray-100 rounded-full">{o.source}</span></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+
+      const ListView = () => (
+        <div className="bg-white rounded-lg border overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50"><tr><th className="text-left p-3 text-sm font-medium text-gray-600">Opportunity</th><th className="text-left p-3 text-sm font-medium text-gray-600">Company</th><th className="text-left p-3 text-sm font-medium text-gray-600">Value</th><th className="text-left p-3 text-sm font-medium text-gray-600">Stage</th><th className="text-left p-3 text-sm font-medium text-gray-600">Source</th><th className="text-left p-3 text-sm font-medium text-gray-600">Close Date</th><th className="p-3"></th></tr></thead>
+            <tbody>
+              {filteredOpps.map(o => {
+                const st = SALES_STAGES.find(s => s.id === o.stage);
+                return (
+                  <tr key={o.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedOpp(o)}>
+                    <td className="p-3 font-medium">{o.name}</td><td className="p-3 text-gray-600">{getCompanyName(o.companyId)}</td><td className="p-3 text-green-600 font-medium">{fmt(o.value)}</td>
+                    <td className="p-3"><span className="px-2 py-1 rounded-full text-xs text-white" style={{ backgroundColor: st?.color }}>{st?.name}</span></td>
+                    <td className="p-3 text-gray-600">{o.source}</td><td className="p-3 text-gray-600">{o.expectedCloseDate}</td>
+                    <td className="p-3" onClick={e => e.stopPropagation()}><button onClick={() => { setEditingItem(o); setShowOppModal(true); }} className="p-1 text-gray-400 hover:text-blue-600"><Icon name="edit" size={16} /></button><button onClick={() => deleteOpp(o.id)} className="p-1 text-gray-400 hover:text-red-600"><Icon name="trash" size={16} /></button></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {!filteredOpps.length && <div className="p-8 text-center text-gray-500">No opportunities found</div>}
+        </div>
+      );
+
+      const Companies = () => (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Companies</h2>
+            <button onClick={() => { setEditingItem(null); setShowCompanyModal(true); }} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+              <Icon name="plus" size={18} />Add Company
+            </button>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {data.companies.map(company => {
+              const contactCount = data.contacts.filter(c => c.companyId === company.id).length;
+              const oppCount = data.opportunities.filter(o => o.companyId === company.id).length;
+              const totalValue = data.opportunities.filter(o => o.companyId === company.id && !['won', 'lost'].includes(o.stage)).reduce((sum, o) => sum + o.value, 0);
+
+              return (
+                <div key={company.id} className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                          <Icon name="building" size={20} />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-lg cursor-pointer hover:text-blue-600" onClick={() => setSelectedCompany(company)}>{company.name}</div>
+                          {company.industry && <div className="text-sm text-gray-500">{company.industry}</div>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => { setEditingItem(company); setShowCompanyModal(true); }} className="p-1 text-gray-400 hover:text-blue-600"><Icon name="edit" size={16} /></button>
+                      <button onClick={() => deleteCompany(company.id)} className="p-1 text-gray-400 hover:text-red-600"><Icon name="trash" size={16} /></button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    {company.website && (
+                      <a href={company.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                        <Icon name="globe" size={14} />Website
+                      </a>
+                    )}
+                    {company.linkedIn && (
+                      <a href={company.linkedIn} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                        <Icon name="linkedin" size={14} />LinkedIn
+                      </a>
+                    )}
+                    {company.phone && (
+                      <div className="flex items-center gap-1 text-gray-600">
+                        <Icon name="phone" size={14} />{company.phone}
+                      </div>
+                    )}
+                    {company.address && (
+                      <div className="flex items-center gap-1 text-gray-600 col-span-2">
+                        <Icon name="mapPin" size={14} /><span className="truncate">{company.address}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Icon name="users" size={14} className="text-gray-400" />
+                      <span className="text-gray-600">{contactCount} contacts</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Icon name="briefcase" size={14} className="text-gray-400" />
+                      <span className="text-gray-600">{oppCount} opportunities</span>
+                    </div>
+                    {totalValue > 0 && (
+                      <div className="ml-auto font-medium text-green-600">{fmt(totalValue)} pipeline</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {!data.companies.length && (
+            <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
+              No companies yet. Click "Add Company" to create your first company account.
+            </div>
+          )}
+        </div>
+      );
+
+      const Contacts = () => {
+        // Group contacts by company
+        const contactsByCompany = useMemo(() => {
+          const grouped = {};
+          data.companies.forEach(company => {
+            grouped[company.id] = {
+              company,
+              contacts: data.contacts.filter(c => c.companyId === company.id)
+            };
+          });
+          // Add contacts without a company
+          const unassigned = data.contacts.filter(c => !c.companyId || !data.companies.find(comp => comp.id === c.companyId));
+          if (unassigned.length > 0) {
+            grouped['unassigned'] = {
+              company: { id: 'unassigned', name: 'Unassigned Contacts' },
+              contacts: unassigned
+            };
+          }
+          return grouped;
+        }, [data.contacts, data.companies]);
+
+        return (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Contacts</h2>
+              <button onClick={() => { setEditingItem(null); setShowContactModal(true); }} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                <Icon name="plus" size={18} />Add Contact
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {Object.entries(contactsByCompany).map(([companyId, { company, contacts }]) => {
+                if (contacts.length === 0) return null;
+                const isExpanded = expandedCompanies[companyId] !== false; // Default to expanded
+
+                return (
+                  <div key={companyId} className="bg-white rounded-lg border overflow-hidden">
+                    <div
+                      className="p-4 flex items-center gap-3 cursor-pointer hover:bg-gray-50 border-b"
+                      onClick={() => toggleCompanyExpand(companyId)}
+                    >
+                      <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} size={18} className="text-gray-400" />
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                        <Icon name="building" size={16} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">{company.name}</div>
+                        <div className="text-sm text-gray-500">{contacts.length} contact{contacts.length !== 1 ? 's' : ''}</div>
+                      </div>
+                      {companyId !== 'unassigned' && company.website && (
+                        <a
+                          href={company.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <Icon name="externalLink" size={16} />
+                        </a>
+                      )}
+                      <button
+                        onClick={e => { e.stopPropagation(); setEditingItem({ companyId }); setShowContactModal(true); }}
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        + Add Contact
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {contacts.map(c => (
+                          <div key={c.id} className="bg-gray-50 rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
+                                  <Icon name="user" size={20} />
+                                </div>
+                                <div>
+                                  <div className="font-semibold">{c.name}</div>
+                                  {c.role && <div className="text-sm text-gray-500">{c.role}</div>}
+                                </div>
+                              </div>
+                              <div className="flex gap-1">
+                                <button onClick={() => { setEditingItem(c); setShowContactModal(true); }} className="p-1 text-gray-400 hover:text-blue-600"><Icon name="edit" size={14} /></button>
+                                <button onClick={() => deleteContact(c.id)} className="p-1 text-gray-400 hover:text-red-600"><Icon name="trash" size={14} /></button>
+                              </div>
+                            </div>
+                            <div className="mt-3 space-y-1 text-sm">
+                              {c.email && (
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <Icon name="mail" size={14} />{c.email}
+                                </div>
+                              )}
+                              {c.phone && (
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <Icon name="phone" size={14} />{c.phone}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {data.contacts.length === 0 && (
+              <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
+                No contacts yet. Click "Add Contact" to create your first contact.
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      const Activities = () => {
+        const sorted = [...data.activities].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return (
+          <div className="space-y-4">
+            <div className="flex justify-between"><h2 className="text-xl font-semibold">Activity Log</h2><button onClick={() => { setEditingItem(null); setShowActivityModal(true); }} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Icon name="plus" size={18} />Log Activity</button></div>
+            <div className="bg-white rounded-lg border">
+              {sorted.map(a => {
+                const opp = data.opportunities.find(o => o.id === a.opportunityId);
+                const t = ACTIVITY_TYPES.find(x => x.id === a.type);
+                return (
+                  <div key={a.id} className="p-4 border-b last:border-b-0 hover:bg-gray-50">
+                    <div className="flex items-start gap-3"><div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><Icon name={t?.icon || 'activity'} size={16} /></div>
+                    <div><div className="flex items-center gap-2"><span className="font-medium">{t?.name}</span><span className="text-gray-400">•</span><span className="text-sm text-gray-500">{a.date}</span></div>{opp && <div className="text-sm text-blue-600 cursor-pointer hover:underline" onClick={() => setSelectedOpp(opp)}>{opp.name}</div>}<div className="text-gray-600 mt-1">{a.notes}</div></div></div>
+                  </div>
+                );
+              })}
+              {!sorted.length && <div className="p-8 text-center text-gray-500">No activities yet</div>}
+            </div>
+          </div>
+        );
+      };
+
+      const Dashboard = () => (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg border p-4"><div className="text-sm text-gray-500">Active Pipeline</div><div className="text-2xl font-bold">{fmt(metrics.pipeline)}</div><div className="text-sm text-gray-400">{metrics.count} opportunities</div></div>
+            <div className="bg-white rounded-lg border p-4"><div className="text-sm text-gray-500">Weighted Value</div><div className="text-2xl font-bold text-blue-600">{fmt(metrics.weighted)}</div><div className="text-sm text-gray-400">Probability-adjusted</div></div>
+            <div className="bg-white rounded-lg border p-4"><div className="text-sm text-gray-500">Won Value</div><div className="text-2xl font-bold text-green-600">{fmt(metrics.wonValue)}</div><div className="text-sm text-gray-400">Closed deals</div></div>
+            <div className="bg-white rounded-lg border p-4"><div className="text-sm text-gray-500">Win Rate</div><div className="text-2xl font-bold text-purple-600">{metrics.winRate}%</div><div className="text-sm text-gray-400">Won vs Lost</div></div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-lg border p-4">
+              <h3 className="font-semibold mb-4">Pipeline by Stage</h3>
+              <div className="space-y-2">
+                {SALES_STAGES.filter(s => !['won','lost'].includes(s.id)).map(s => {
+                  const v = filteredOpps.filter(o => o.stage === s.id).reduce((sum, o) => sum + o.value, 0);
+                  const max = Math.max(...SALES_STAGES.map(st => filteredOpps.filter(o => o.stage === st.id).reduce((sum, o) => sum + o.value, 0)), 1);
+                  return (
+                    <div key={s.id} className="flex items-center gap-3">
+                      <div className="w-32 text-sm text-gray-600">{s.name}</div>
+                      <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden"><div className="h-full rounded" style={{ width: `${(v/max)*100}%`, backgroundColor: s.color }} /></div>
+                      <div className="w-24 text-right text-sm font-medium">{fmt(v)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="bg-white rounded-lg border p-4">
+              <h3 className="font-semibold mb-4">Top Companies by Pipeline</h3>
+              <div className="space-y-3">
+                {data.companies
+                  .map(company => ({
+                    ...company,
+                    pipelineValue: data.opportunities
+                      .filter(o => o.companyId === company.id && !['won', 'lost'].includes(o.stage))
+                      .reduce((sum, o) => sum + o.value, 0)
+                  }))
+                  .filter(c => c.pipelineValue > 0)
+                  .sort((a, b) => b.pipelineValue - a.pipelineValue)
+                  .slice(0, 5)
+                  .map(company => (
+                    <div key={company.id} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                        <Icon name="building" size={16} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">{company.name}</div>
+                        <div className="text-sm text-gray-500">{company.industry || 'No industry'}</div>
+                      </div>
+                      <div className="text-green-600 font-medium">{fmt(company.pipelineValue)}</div>
+                    </div>
+                  ))
+                }
+                {data.companies.filter(c => data.opportunities.some(o => o.companyId === c.id && !['won', 'lost'].includes(o.stage))).length === 0 && (
+                  <div className="text-center text-gray-500 py-4">No active pipeline</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      const CompanyDetailPanel = () => {
+        if (!selectedCompany) return null;
+        const contacts = data.contacts.filter(c => c.companyId === selectedCompany.id);
+        const opportunities = data.opportunities.filter(o => o.companyId === selectedCompany.id);
+        const activeOpps = opportunities.filter(o => !['won', 'lost'].includes(o.stage));
+        const wonOpps = opportunities.filter(o => o.stage === 'won');
+
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end z-50">
+            <div className="w-full max-w-lg bg-white h-full overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b p-4 flex justify-between">
+                <h2 className="text-lg font-semibold">Company Details</h2>
+                <button onClick={() => setSelectedCompany(null)} className="p-1 hover:bg-gray-100 rounded"><Icon name="x" size={20} /></button>
+              </div>
+              <div className="p-4 space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                    <Icon name="building" size={32} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">{selectedCompany.name}</h3>
+                    {selectedCompany.industry && <div className="text-gray-500">{selectedCompany.industry}</div>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-green-50 rounded-lg p-3">
+                    <div className="text-sm text-green-600">Active Pipeline</div>
+                    <div className="text-xl font-bold text-green-700">{fmt(activeOpps.reduce((s, o) => s + o.value, 0))}</div>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg p-3">
+                    <div className="text-sm text-blue-600">Won Value</div>
+                    <div className="text-xl font-bold text-blue-700">{fmt(wonOpps.reduce((s, o) => s + o.value, 0))}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-500 font-medium">Company Information</div>
+                  <div className="space-y-2">
+                    {selectedCompany.website && (
+                      <a href={selectedCompany.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
+                        <Icon name="globe" size={16} />{selectedCompany.website}
+                      </a>
+                    )}
+                    {selectedCompany.linkedIn && (
+                      <a href={selectedCompany.linkedIn} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
+                        <Icon name="linkedin" size={16} />LinkedIn Profile
+                      </a>
+                    )}
+                    {selectedCompany.phone && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Icon name="phone" size={16} />{selectedCompany.phone}
+                      </div>
+                    )}
+                    {selectedCompany.address && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Icon name="mapPin" size={16} />{selectedCompany.address}
+                      </div>
+                    )}
+                    {selectedCompany.employeeCount && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Icon name="users" size={16} />{selectedCompany.employeeCount} employees
+                      </div>
+                    )}
+                    {selectedCompany.annualRevenue && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Icon name="dollarSign" size={16} />£{selectedCompany.annualRevenue} annual revenue
+                      </div>
+                    )}
+                  </div>
+                  {selectedCompany.description && (
+                    <div className="text-gray-600 text-sm mt-2">{selectedCompany.description}</div>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-sm text-gray-500 font-medium">Contacts ({contacts.length})</div>
+                    <button onClick={() => { setEditingItem({ companyId: selectedCompany.id }); setShowContactModal(true); }} className="text-sm text-blue-600 hover:underline">+ Add</button>
+                  </div>
+                  <div className="space-y-2">
+                    {contacts.map(c => (
+                      <div key={c.id} className="bg-gray-50 rounded-lg p-3 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                          <Icon name="user" size={16} className="text-gray-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{c.name}</div>
+                          <div className="text-xs text-gray-500">{c.role}</div>
+                        </div>
+                        <button onClick={() => { setEditingItem(c); setShowContactModal(true); }} className="p-1 text-gray-400 hover:text-blue-600">
+                          <Icon name="edit" size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {contacts.length === 0 && <div className="text-sm text-gray-400 text-center py-2">No contacts</div>}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-sm text-gray-500 font-medium">Opportunities ({opportunities.length})</div>
+                    <button onClick={() => { setEditingItem({ companyId: selectedCompany.id }); setShowOppModal(true); }} className="text-sm text-blue-600 hover:underline">+ Add</button>
+                  </div>
+                  <div className="space-y-2">
+                    {opportunities.map(o => {
+                      const st = SALES_STAGES.find(s => s.id === o.stage);
+                      return (
+                        <div key={o.id} className="bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100" onClick={() => { setSelectedCompany(null); setSelectedOpp(o); }}>
+                          <div className="flex justify-between items-start">
+                            <div className="font-medium text-sm">{o.name}</div>
+                            <span className="px-2 py-0.5 rounded-full text-xs text-white" style={{ backgroundColor: st?.color }}>{st?.name}</span>
+                          </div>
+                          <div className="flex justify-between mt-1">
+                            <span className="text-sm text-green-600 font-medium">{fmt(o.value)}</span>
+                            <span className="text-xs text-gray-400">{o.expectedCloseDate}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {opportunities.length === 0 && <div className="text-sm text-gray-400 text-center py-2">No opportunities</div>}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4 border-t">
+                  <button onClick={() => { setEditingItem(selectedCompany); setShowCompanyModal(true); }} className="flex-1 flex items-center justify-center gap-2 border px-4 py-2 rounded-lg hover:bg-gray-50">
+                    <Icon name="edit" size={16} />Edit
+                  </button>
+                  <button onClick={() => deleteCompany(selectedCompany.id)} className="flex items-center justify-center gap-2 border border-red-300 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50">
+                    <Icon name="trash" size={16} />Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const DetailPanel = () => {
+        if (!selectedOpp) return null;
+        const st = SALES_STAGES.find(s => s.id === selectedOpp.stage);
+        const contact = data.contacts.find(c => c.id === selectedOpp.contactId);
+        const company = data.companies.find(c => c.id === selectedOpp.companyId);
+        const acts = data.activities.filter(a => a.opportunityId === selectedOpp.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-end z-50">
+            <div className="w-full max-w-lg bg-white h-full overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b p-4 flex justify-between"><h2 className="text-lg font-semibold">Opportunity Details</h2><button onClick={() => setSelectedOpp(null)} className="p-1 hover:bg-gray-100 rounded"><Icon name="x" size={20} /></button></div>
+              <div className="p-4 space-y-6">
+                <div><h3 className="text-xl font-bold">{selectedOpp.name}</h3>
+                  {company && (
+                    <div className="flex items-center gap-2 mt-2 text-blue-600 cursor-pointer hover:underline" onClick={() => { setSelectedOpp(null); setSelectedCompany(company); }}>
+                      <Icon name="building" size={16} />{company.name}
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><div className="text-sm text-gray-500">Value</div><div className="text-lg font-semibold text-green-600">{fmt(selectedOpp.value)}</div></div>
+                  <div><div className="text-sm text-gray-500">Stage</div><select value={selectedOpp.stage} onChange={e => { updateStage(selectedOpp.id, e.target.value); setSelectedOpp({ ...selectedOpp, stage: e.target.value }); }} className="mt-1 border rounded px-2 py-1 text-sm">{SALES_STAGES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+                  <div><div className="text-sm text-gray-500">Source</div><div className="font-medium">{selectedOpp.source}</div></div>
+                  <div><div className="text-sm text-gray-500">Expected Close</div><div className="font-medium">{selectedOpp.expectedCloseDate}</div></div>
+                  <div><div className="text-sm text-gray-500">Probability</div><div className="font-medium">{st?.probability}%</div></div>
+                  <div><div className="text-sm text-gray-500">Created</div><div className="font-medium">{selectedOpp.createdDate}</div></div>
+                </div>
+                {selectedOpp.description && <div><div className="text-sm text-gray-500 mb-1">Description</div><div>{selectedOpp.description}</div></div>}
+                {selectedOpp.nextStep && <div className="bg-blue-50 border border-blue-200 rounded-lg p-3"><div className="text-sm text-blue-600 font-medium">Next Step</div><div className="text-blue-800">{selectedOpp.nextStep}</div></div>}
+                {contact && <div><div className="text-sm text-gray-500 mb-2">Primary Contact</div><div className="bg-gray-50 rounded-lg p-3"><div className="font-medium">{contact.name}</div><div className="text-sm text-gray-500">{contact.role}</div><div className="text-sm text-gray-600 mt-1">{contact.email}</div><div className="text-sm text-gray-600">{contact.phone}</div></div></div>}
+                <div>
+                  <div className="flex justify-between mb-2"><div className="text-sm text-gray-500">Activities</div><button onClick={() => { setEditingItem({ opportunityId: selectedOpp.id }); setShowActivityModal(true); }} className="text-sm text-blue-600 hover:underline">+ Add</button></div>
+                  <div className="space-y-2">
+                    {acts.map(a => { const t = ACTIVITY_TYPES.find(x => x.id === a.type); return (<div key={a.id} className="bg-gray-50 rounded-lg p-3 flex items-start gap-2"><Icon name={t?.icon || 'activity'} size={16} className="text-gray-400 mt-0.5" /><div><div className="text-sm font-medium">{t?.name} • {a.date}</div><div className="text-sm text-gray-600">{a.notes}</div></div></div>); })}
+                    {!acts.length && <div className="text-sm text-gray-400 text-center py-4">No activities</div>}
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-4 border-t">
+                  <button onClick={() => { setEditingItem(selectedOpp); setShowOppModal(true); }} className="flex-1 flex items-center justify-center gap-2 border px-4 py-2 rounded-lg hover:bg-gray-50"><Icon name="edit" size={16} />Edit</button>
+                  <button onClick={() => deleteOpp(selectedOpp.id)} className="flex items-center justify-center gap-2 border border-red-300 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50"><Icon name="trash" size={16} />Delete</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const CompanyModal = () => {
+        const [form, setForm] = useState(editingItem || {
+          name: '', website: '', linkedIn: '', industry: '', address: '',
+          phone: '', employeeCount: '', annualRevenue: '', description: ''
+        });
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b flex justify-between">
+                <h2 className="text-lg font-semibold">{editingItem?.id ? 'Edit' : 'New'} Company</h2>
+                <button onClick={() => { setShowCompanyModal(false); setEditingItem(null); }}><Icon name="x" size={20} /></button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Company Name *</label>
+                  <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="e.g., Acme Corporation" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Website</label>
+                    <input type="url" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="https://..." />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">LinkedIn</label>
+                    <input type="url" value={form.linkedIn} onChange={e => setForm({ ...form, linkedIn: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="https://linkedin.com/company/..." />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Industry</label>
+                    <select value={form.industry} onChange={e => setForm({ ...form, industry: e.target.value })} className="w-full border rounded-lg px-3 py-2">
+                      <option value="">Select...</option>
+                      {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Phone</label>
+                    <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="+1 555-0100" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Address</label>
+                  <input type="text" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="123 Main Street, City, State" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Employee Count</label>
+                    <input type="text" value={form.employeeCount} onChange={e => setForm({ ...form, employeeCount: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="e.g., 500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Annual Revenue</label>
+                    <input type="text" value={form.annualRevenue} onChange={e => setForm({ ...form, annualRevenue: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="e.g., 50M" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} className="w-full border rounded-lg px-3 py-2" placeholder="Brief description of the company..." />
+                </div>
+              </div>
+              <div className="p-4 border-t flex justify-end gap-2">
+                <button onClick={() => { setShowCompanyModal(false); setEditingItem(null); }} className="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onClick={() => saveCompany(form)} disabled={!form.name} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{editingItem?.id ? 'Save' : 'Create'}</button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const OppModal = () => {
+        const [form, setForm] = useState(editingItem || { name: '', companyId: '', contactId: '', value: '', stage: 'lead', source: SOURCES[0], expectedCloseDate: '', description: '', nextStep: '' });
+
+        // Filter contacts based on selected company
+        const availableContacts = form.companyId ? data.contacts.filter(c => c.companyId === form.companyId) : data.contacts;
+
+        // When company changes, clear contact if not from that company
+        const handleCompanyChange = (companyId) => {
+          const contactBelongsToCompany = data.contacts.find(c => c.id === form.contactId)?.companyId === companyId;
+          setForm({
+            ...form,
+            companyId,
+            contactId: contactBelongsToCompany ? form.contactId : ''
+          });
+        };
+
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b flex justify-between"><h2 className="text-lg font-semibold">{editingItem?.id ? 'Edit' : 'New'} Opportunity</h2><button onClick={() => { setShowOppModal(false); setEditingItem(null); }}><Icon name="x" size={20} /></button></div>
+              <div className="p-4 space-y-4">
+                <div><label className="block text-sm font-medium mb-1">Name *</label><input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Company *</label>
+                    <select value={form.companyId} onChange={e => handleCompanyChange(e.target.value)} className="w-full border rounded-lg px-3 py-2">
+                      <option value="">Select company...</option>
+                      {data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Contact</label>
+                    <select value={form.contactId} onChange={e => setForm({ ...form, contactId: e.target.value })} className="w-full border rounded-lg px-3 py-2" disabled={!form.companyId && availableContacts.length === 0}>
+                      <option value="">{form.companyId ? 'Select contact...' : 'Select company first'}</option>
+                      {availableContacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Value (£) *</label><input type="number" value={form.value} onChange={e => setForm({ ...form, value: parseFloat(e.target.value) || '' })} className="w-full border rounded-lg px-3 py-2" /></div><div><label className="block text-sm font-medium mb-1">Expected Close</label><input type="date" value={form.expectedCloseDate} onChange={e => setForm({ ...form, expectedCloseDate: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div></div>
+                <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Stage</label><select value={form.stage} onChange={e => setForm({ ...form, stage: e.target.value })} className="w-full border rounded-lg px-3 py-2">{SALES_STAGES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div><div><label className="block text-sm font-medium mb-1">Source</label><select value={form.source} onChange={e => setForm({ ...form, source: e.target.value })} className="w-full border rounded-lg px-3 py-2">{SOURCES.map(s => <option key={s} value={s}>{s}</option>)}</select></div></div>
+                <div><label className="block text-sm font-medium mb-1">Description</label><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} className="w-full border rounded-lg px-3 py-2" /></div>
+                <div><label className="block text-sm font-medium mb-1">Next Step</label><input type="text" value={form.nextStep} onChange={e => setForm({ ...form, nextStep: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
+              </div>
+              <div className="p-4 border-t flex justify-end gap-2"><button onClick={() => { setShowOppModal(false); setEditingItem(null); }} className="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button><button onClick={() => saveOpp(form)} disabled={!form.name || !form.companyId || !form.value} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{editingItem?.id ? 'Save' : 'Create'}</button></div>
+            </div>
+          </div>
+        );
+      };
+
+      const ContactModal = () => {
+        const [form, setForm] = useState(editingItem || { name: '', email: '', phone: '', companyId: '', role: '' });
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-md">
+              <div className="p-4 border-b flex justify-between"><h2 className="text-lg font-semibold">{editingItem?.id ? 'Edit' : 'New'} Contact</h2><button onClick={() => { setShowContactModal(false); setEditingItem(null); }}><Icon name="x" size={20} /></button></div>
+              <div className="p-4 space-y-4">
+                <div><label className="block text-sm font-medium mb-1">Name *</label><input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Company *</label>
+                  <select value={form.companyId} onChange={e => setForm({ ...form, companyId: e.target.value })} className="w-full border rounded-lg px-3 py-2">
+                    <option value="">Select company...</option>
+                    {data.companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div><label className="block text-sm font-medium mb-1">Role</label><input type="text" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="e.g., VP Operations" /></div>
+                <div><label className="block text-sm font-medium mb-1">Email</label><input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
+                <div><label className="block text-sm font-medium mb-1">Phone</label><input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
+              </div>
+              <div className="p-4 border-t flex justify-end gap-2"><button onClick={() => { setShowContactModal(false); setEditingItem(null); }} className="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button><button onClick={() => saveContact(form)} disabled={!form.name || !form.companyId} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{editingItem?.id ? 'Save' : 'Create'}</button></div>
+            </div>
+          </div>
+        );
+      };
+
+      const ActivityModal = () => {
+        const [form, setForm] = useState(editingItem || { opportunityId: '', type: 'call', date: new Date().toISOString().split('T')[0], notes: '' });
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-md">
+              <div className="p-4 border-b flex justify-between"><h2 className="text-lg font-semibold">Log Activity</h2><button onClick={() => { setShowActivityModal(false); setEditingItem(null); }}><Icon name="x" size={20} /></button></div>
+              <div className="p-4 space-y-4">
+                <div><label className="block text-sm font-medium mb-1">Opportunity *</label><select value={form.opportunityId} onChange={e => setForm({ ...form, opportunityId: e.target.value })} className="w-full border rounded-lg px-3 py-2"><option value="">Select...</option>{data.opportunities.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></div>
+                <div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium mb-1">Type</label><select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} className="w-full border rounded-lg px-3 py-2">{ACTIVITY_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div><label className="block text-sm font-medium mb-1">Date</label><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div></div>
+                <div><label className="block text-sm font-medium mb-1">Notes *</label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full border rounded-lg px-3 py-2" /></div>
+              </div>
+              <div className="p-4 border-t flex justify-end gap-2"><button onClick={() => { setShowActivityModal(false); setEditingItem(null); }} className="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button><button onClick={() => saveActivity(form)} disabled={!form.opportunityId || !form.notes} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Log Activity</button></div>
+            </div>
+          </div>
+        );
+      };
+
+      const Filters = () => (
+        <div className={`bg-white border rounded-lg p-4 mb-4 ${showFilters ? '' : 'hidden'}`}>
+          <div className="flex justify-between mb-4"><h3 className="font-semibold">Filters</h3><button onClick={() => setFilters({ stages: [], sources: [], dateFrom: '', dateTo: '', valueMin: '', valueMax: '', search: '' })} className="text-sm text-blue-600 hover:underline">Clear all</button></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div><label className="block text-sm font-medium mb-1">Search</label><input type="text" value={filters.search} onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} placeholder="Name or company..." className="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+            <div><label className="block text-sm font-medium mb-1">Stage</label><select multiple value={filters.stages} onChange={e => setFilters(f => ({ ...f, stages: Array.from(e.target.selectedOptions, o => o.value) }))} className="w-full border rounded-lg px-3 py-2 text-sm h-20">{SALES_STAGES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+            <div><label className="block text-sm font-medium mb-1">Source</label><select multiple value={filters.sources} onChange={e => setFilters(f => ({ ...f, sources: Array.from(e.target.selectedOptions, o => o.value) }))} className="w-full border rounded-lg px-3 py-2 text-sm h-20">{SOURCES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+            <div><label className="block text-sm font-medium mb-1">Close Date</label><div className="flex gap-2"><input type="date" value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))} className="w-full border rounded-lg px-2 py-2 text-sm" /><input type="date" value={filters.dateTo} onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))} className="w-full border rounded-lg px-2 py-2 text-sm" /></div></div>
+            <div><label className="block text-sm font-medium mb-1">Value Range</label><div className="flex gap-2"><input type="number" value={filters.valueMin} onChange={e => setFilters(f => ({ ...f, valueMin: e.target.value }))} placeholder="Min" className="w-full border rounded-lg px-2 py-2 text-sm" /><input type="number" value={filters.valueMax} onChange={e => setFilters(f => ({ ...f, valueMax: e.target.value }))} placeholder="Max" className="w-full border rounded-lg px-2 py-2 text-sm" /></div></div>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="min-h-screen bg-gray-100">
+          {isLoading && (
+            <div className="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading your data...</p>
+              </div>
+            </div>
+          )}
+          <header className="bg-white border-b sticky top-0 z-40">
+            <div className="max-w-7xl mx-auto px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Icon name="briefcase" size={24} className="text-blue-600" />
+                  <h1 className="text-xl font-bold">Opportunity Tracker</h1>
+                  <span className={`text-xs px-2 py-1 rounded-full ml-2 ${
+                    saveStatus === 'saved' ? 'bg-green-100 text-green-600' :
+                    saveStatus === 'saving' ? 'bg-yellow-100 text-yellow-600' :
+                    'bg-red-100 text-red-600'
+                  }`}>
+                    {saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'saving' ? '⏳ Saving...' : '⚠ Save failed'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer hover:bg-gray-50"><Icon name="upload" size={18} className="text-gray-500" /><span className="text-sm text-gray-600 hidden sm:inline">Import</span><input type="file" accept=".json" onChange={importData} className="hidden" /></label>
+                  <button onClick={exportData} className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50"><Icon name="download" size={18} className="text-gray-500" /><span className="text-sm text-gray-600 hidden sm:inline">Export</span></button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1">
+                <NavBtn view="pipeline" icon="briefcase" label="Pipeline" />
+                <NavBtn view="list" icon="filter" label="List" />
+                <NavBtn view="companies" icon="building" label="Companies" />
+                <NavBtn view="contacts" icon="users" label="Contacts" />
+                <NavBtn view="activities" icon="activity" label="Activities" />
+                <NavBtn view="dashboard" icon="dashboard" label="Dashboard" />
+              </div>
+            </div>
+          </header>
+          <main className="max-w-7xl mx-auto px-4 py-6">
+            {(activeView === 'pipeline' || activeView === 'list') && (
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <button onClick={() => { setEditingItem(null); setShowOppModal(true); }} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Icon name="plus" size={18} />New Opportunity</button>
+                <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2 border rounded-lg ${showFilters ? 'bg-blue-50 border-blue-300' : 'hover:bg-gray-50'}`}><Icon name="filter" size={18} />Filters{(filters.stages.length || filters.sources.length || filters.dateFrom || filters.dateTo || filters.valueMin || filters.valueMax) && <span className="w-2 h-2 bg-blue-600 rounded-full" />}</button>
+                <div className="ml-auto text-sm text-gray-500">{filteredOpps.length} opportunities • {fmt(filteredOpps.reduce((s, o) => s + o.value, 0))} total</div>
+              </div>
+            )}
+            <Filters />
+            {activeView === 'pipeline' && <Pipeline />}
+            {activeView === 'list' && <ListView />}
+            {activeView === 'companies' && <Companies />}
+            {activeView === 'contacts' && <Contacts />}
+            {activeView === 'activities' && <Activities />}
+            {activeView === 'dashboard' && <Dashboard />}
+          </main>
+          {showOppModal && <OppModal />}
+          {showContactModal && <ContactModal />}
+          {showActivityModal && <ActivityModal />}
+          {showCompanyModal && <CompanyModal />}
+          {selectedOpp && <DetailPanel />}
+          {selectedCompany && <CompanyDetailPanel />}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

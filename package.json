@@ -1,0 +1,20 @@
+{
+  "name": "opportunity-tracker",
+  "version": "1.0.0",
+  "description": "Secure opportunity tracker with Azure Blob Storage backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "@azure/storage-blob": "^12.17.0"
+  },
+  "author": "Automation Outcomes",
+  "license": "UNLICENSED",
+  "private": true
+}
